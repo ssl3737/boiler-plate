@@ -1,10 +1,9 @@
 const express = require('express')
 const app = express()
-const port = 5000
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const config = require('./config/key');
-
+const { auth} = require("./middleware/auth");
 const { User } = require("./models/User");
 
 //application/x-www-form-urlencoded
@@ -26,7 +25,11 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-app.post('/register', (req, res) => {
+app.get('/api/hello', (req, res) => {    
+    res.send("Hello Hello")
+})
+
+app.post('/api/users/register', (req, res) => {
     // when you register, get data from client and add to database
     
     const user = new User(req.body);
@@ -72,5 +75,33 @@ app.post('/api/users/login', (req, res) => {
         })
     })
 })
+// role 1 -> admin 
+// role 2 -> admin for a department
+// role 0 -> normal user  
+app.get('/api/users/auth', auth, (req, res) => {
+    // 여기까지 미들웨어를 통과해 왔다는 이야기는 Authentication 이 true
+    res.status(200).json({
+        _id: req.user._id,
+        isAdmin: req.user.role === 0 ? false : true,
+        isAuth: true,
+        email: req.user.email,
+        name: req.user.name,
+        lastname: req.user.lastname,
+        role: req.user.role,
+        image: req.user.image
+    })
+})
+
+app.get('/api/users/logout', auth, (req, res) => {
+    User.findOneAndUpdate({ _id: req.user._id}, 
+        { token: "" }
+        , (err, user) => {
+            if (err) return res.json({ success: false, err });
+            return res.status(200).send({
+                success: true
+            })
+        })
+})
+const port = 5000
 
 app.listen(port, () => console.log(`Example app listening on port ${port}!`))
